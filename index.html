@@ -90,11 +90,13 @@ label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6
 .setrow.pr .check{background:var(--gold)} .setrow.pr .check svg{stroke:#1a1408} .setrow.pr .settype{color:var(--gold);border-color:rgba(232,180,76,.45)}
 .exprog{font-size:12px;font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums} .exprog.full{color:var(--good)}
 .wprog{display:flex;flex-direction:column;gap:7px} .wprog .bar{height:6px}
-#timer{flex-wrap:wrap} #timer .rbar{flex-basis:100%;height:6px;order:3} #timer .rbar>i{transition:width .5s linear}
-#restNext{flex-basis:100%;order:4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.prev{background:none;border:1px dashed var(--line2);border-radius:10px;min-height:44px;color:var(--muted);font-size:13px;padding:0 6px;text-align:left}
+#timer .rbar{position:absolute;left:16px;right:16px;bottom:6px;height:3px} #timer .rbar>i{transition:width .5s linear}
+#restNext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} #restT{font-size:22px;font-weight:600;line-height:1.15}
+#timer .btn.sm{min-width:48px;padding:0 10px}
+.prev{background:none;border:0;border-radius:10px;min-height:44px;color:var(--muted);font-size:13px;padding:0 4px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prev:active{background:var(--surface2);color:var(--text)}
 .bar{height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden} .bar>i{display:block;height:100%;background:var(--accent-hi);border-radius:999px}
-#timer{position:sticky;bottom:0;margin:0 -4px -16px;padding:12px 14px;background:var(--surface3);border:1px solid var(--line2);border-radius:18px;display:flex;align-items:center;gap:10px;box-shadow:0 14px 30px -12px #000}
+#timer{position:sticky;bottom:0;margin:0 -4px -16px;padding:10px 12px 14px 16px;background:var(--surface3);border:1px solid var(--line2);border-radius:18px;display:flex;align-items:center;gap:10px;box-shadow:0 14px 30px -12px #000}
 #sheetwrap{position:absolute;inset:0;background:rgba(4,6,9,.72);display:none;align-items:flex-end;z-index:5}
 #sheetwrap.on{display:flex}
 #sheet{width:100%;max-height:90%;overflow-y:auto;background:var(--surface);border-top:1px solid var(--line2);border-radius:26px 26px 0 0;padding:20px 16px 24px;display:flex;flex-direction:column;gap:12px;animation:up .22s ease-out}
@@ -112,6 +114,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:ta
 #app{padding-top:max(20px,env(safe-area-inset-top))}
 #nav{margin-bottom:max(12px,env(safe-area-inset-bottom))}
 #app>*{flex-shrink:0}
+.iconbtn{flex:none;width:44px;height:44px;border-radius:12px;border:0;background:none;color:var(--muted);display:inline-flex;align-items:center;justify-content:center} .iconbtn:active{background:var(--surface2)} .iconbtn svg{width:22px;height:22px;fill:currentColor}
 .thumb{width:48px;height:48px;border-radius:15px;background:var(--surface2);border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .thumb svg{width:44px;height:44px}
 .code{font-family:var(--display);font-size:24px;font-weight:600;letter-spacing:.08em;text-align:center;padding:16px;border-radius:16px;background:var(--well);border:1px dashed rgba(91,149,255,.6);user-select:all}
@@ -511,6 +514,7 @@ function prsOf(w){
   });return out;
 }
 function lastSets(exId,rid){const s=exSessions(exId);if(rid){const f=s.filter(x=>x.rid===rid);if(f.length)return f[f.length-1]}return s.length?s[s.length-1]:null}
+const shortWhy=t=>/add weight/.test(t)?'Add weight: all reps hit last time':/less assistance/.test(t)?'Less assistance: all reps hit':/Five seconds/.test(t)?'5 s longer than last time':/one more rep/i.test(t)?'+1 rep on your lowest set':t;
 function suggest(exId,lo,hi){
   if(isC(exId))return null;const last=lastSets(exId);if(!last)return null;lo=lo||8;hi=hi||12;const k=kind(exId);
   if(k==='dur'){const t=last.reps;return {w:last.top,r:t+5,why:'Five seconds longer than your best set last time.'}}
@@ -593,14 +597,15 @@ V.home=()=>{
   const next=nextRoutine();
   let h='<div class="row between"><div><h1>Zelus</h1><div class="muted small">'+fmtDate(Date.now())+'</div></div>'+'<div class="row">'+syncBadge()+'<button class="back" data-a="open" data-v="profile" aria-label="Profile and settings"><svg viewBox="0 0 24 24">'+ICON.profile+'</svg></button></div></div>';
   if(syncNote)h+='<div class="card"><div class="warn small">'+esc(syncNote)+'</div></div>';
-  h+='<div class="card hero"><div class="row">'+ring(p)+'<div class="grow col" style="gap:4px"><h2>'+wk.done+' of '+wk.goal+' sessions this week</h2><div class="muted small">'+(wk.streak>1?wk.streak+' weeks in a row with training. ':'')+'Volume '+big(wv[1].v)+' '+unit()+' so far'+(wv[0].v>0?', '+Math.round(wv[1].v/wv[0].v*100)+'% of last week.':'.')+'</div></div></div></div>';
-  h+=startCard();
-  if(targets())h+='<div class="card"><div class="row between"><h3 class="kicker">Fuel today</h3><button class="btn sm ghost" data-a="tab" data-id="food">Open</button></div>'+fuelHero(tkey())+'</div>';
-  if(!S.routines.items.length&&!ws.length){
+  if(S.active){/* the Resume bar above the tab bar covers this */}
+  else if(!S.routines.items.length&&!ws.length){
     h+='<div class="card"><h2>Start with a program</h2><div class="muted small">Pick one to add its routines. You can edit every exercise, set and rep range after.</div>'+PROGRAMS.map(p=>'<button class="item" data-a="addProgram" data-id="'+p.id+'"><div class="grow"><div style="font-weight:600">'+p.name+'</div><div class="muted small">'+p.desc+'</div></div><span class="accent">Add</span></button>').join('')+'<div class="row wrap"><button class="btn sm" data-a="startEmpty">Start an empty workout</button><button class="btn sm ghost" data-a="sample">Load example data</button></div></div>';
   }else{
     h+='<div class="card"><div class="row between"><h3 class="kicker">Up next</h3>'+(next?'<span class="muted tiny">'+next.since+'</span>':'')+'</div>'+(next?'<h2>'+esc(next.r.name)+'</h2><div class="muted small">'+next.r.exs.map(e=>esc(exBy(e.ex).name)).slice(0,4).join(', ')+(next.r.exs.length>4?' and '+(next.r.exs.length-4)+' more':'')+'</div><button class="btn primary block" data-a="startRoutine" data-id="'+next.r.id+'">Start '+esc(next.r.name)+'</button>':'<div class="muted small">No routines yet.</div><button class="btn primary block" data-a="startEmpty">Start an empty workout</button>')+'</div>';
   }
+  h+='<div class="card hero"><div class="row">'+ring(p)+'<div class="grow col" style="gap:4px"><h2>'+wk.done+' of '+wk.goal+' sessions this week</h2><div class="muted small">'+(wk.streak>1?wk.streak+' weeks in a row with training. ':'')+'Volume '+big(wv[1].v)+' '+unit()+' so far'+(wv[0].v>0?', '+Math.round(wv[1].v/wv[0].v*100)+'% of last week.':'.')+'</div></div></div></div>';
+  h+=startCard();
+  if(targets())h+='<div class="card"><div class="row between"><h3 class="kicker">Fuel today</h3><button class="btn sm ghost" data-a="tab" data-id="food">Open</button></div>'+fuelHero(tkey())+'</div>';
   h+='<div class="card"><div class="row between"><h3 class="kicker">Muscles trained, last 7 days</h3><button class="btn sm ghost" data-a="tab" data-id="progress">Details</button></div>'+bodySVG(lv,230)+'</div>';
   const be=S.body.entries;const tr=trend(be);const lastB=tr[tr.length-1];
   h+='<div class="card"><div class="row between"><h3 class="kicker">Body weight</h3><button class="btn sm" data-a="logWeight">Log weight</button></div>'+(lastB?'<div class="row"><div class="tile grow"><div class="v">'+disp(lastB.w)+' '+unit()+'</div><div class="k">Last weigh-in, '+fmtShort(new Date(lastB.d+'T12:00').getTime())+'</div></div><div class="tile grow"><div class="v">'+disp(lastB.t)+' '+unit()+'</div><div class="k">Smoothed trend</div></div></div>':'<div class="muted small">Log your weight most mornings. Zelus smooths the daily swings into a trend line.</div>')+'</div>';
@@ -697,8 +702,8 @@ V.workout=()=>{const w=S.active;if(!w){stack=[];return V.home()}
   const allN=w.exs.reduce((a,e)=>a+e.sets.length,0),allD=w.exs.reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0);
   if(allN)h+='<div class="wprog"><div class="row between tiny"><span class="muted">Workout progress</span><span class="num" id="wProgT">'+allD+' of '+allN+' sets</span></div><div class="bar" role="progressbar" aria-label="Sets done" aria-valuemin="0" aria-valuemax="'+allN+'" aria-valuenow="'+allD+'"><i id="wProgI" style="width:'+(allD/allN*100).toFixed(1)+'%"></i></div></div>';
   w.exs.forEach((e,ei)=>{const ex=exBy(e.ex),last=lastSets(e.ex,S.settings.prev==='routine'?w.routineId:null),sg=suggest(e.ex,e.lo,e.hi);let k=0;
-    h+='<div class="card"><div class="row between"><button style="background:none;border:0;padding:0;text-align:left;display:flex;align-items:center;gap:10px;min-width:0" data-a="openEx" data-id="'+ex.id+'"><span class="thumb">'+moveThumb(ex)+'</span><span class="col" style="gap:2px;min-width:0"><h2 class="accent">'+esc(ex.name)+'</h2>'+(e.sets.length?(d=>'<span class="exprog'+(d===e.sets.length?' full':'')+'">'+d+' of '+e.sets.length+' sets done</span>')(e.sets.filter(s=>s.done).length):'')+'</span></button><button class="btn sm ghost" data-a="exMenu" data-e="'+ei+'" aria-label="Exercise options">Options</button></div>';
-    h+=sg?'<div class="small"><span class="badge">Target</span> '+esc(setStr(e.ex,{w:sg.w||0,r:sg.r}))+(kind(e.ex)==='wr'?' '+unit():'')+' <span class="muted">'+esc(sg.why)+'</span></div>':isC(e.ex)?'<div class="small muted">Log distance and minutes for each bout.</div>':'<div class="small muted">First time logging this. Aim for '+(kind(e.ex)==='dur'?(e.lo?(e.lo===e.hi||!e.hi?e.lo:e.lo+' to '+e.hi)+' seconds a set':'a steady hold'):repText(e))+'.</div>';
+    h+='<div class="card"><div class="row between"><button style="background:none;border:0;padding:0;text-align:left;display:flex;align-items:center;gap:10px;min-width:0" data-a="openEx" data-id="'+ex.id+'"><span class="thumb">'+moveThumb(ex)+'</span><span class="col" style="gap:2px;min-width:0"><h2 class="accent">'+esc(ex.name)+'</h2>'+(e.sets.length?(d=>'<span class="exprog'+(d===e.sets.length?' full':'')+'">'+d+' of '+e.sets.length+' sets done</span>')(e.sets.filter(s=>s.done).length):'')+'</span></button><button class="iconbtn" data-a="exMenu" data-e="'+ei+'" aria-label="Exercise options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button></div>';
+    h+=sg?'<div class="small row" style="gap:8px"><span class="badge">Target</span><span class="num" style="font-weight:600">'+esc(setStr(e.ex,{w:sg.w||0,r:sg.r}))+(kind(e.ex)==='wr'?' '+unit():'')+'</span><span class="muted tiny grow" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(shortWhy(sg.why))+'</span></div>':isC(e.ex)?'<div class="small muted">Log distance and minutes for each bout.</div>':'<div class="small muted">First time logging this. Aim for '+(kind(e.ex)==='dur'?(e.lo?(e.lo===e.hi||!e.hi?e.lo:e.lo+' to '+e.hi)+' seconds a set':'a steady hold'):repText(e))+'.</div>';
     if(e.ss&&w.exs[ei+1])h+='<div class="small"><span class="badge">Superset</span> straight into '+esc(exBy(w.exs[ei+1].ex).name)+', then rest.</div>';
     h+='<div class="setgrid muted tiny"><span>Set</span><span>Last time</span><span style="text-align:center">'+colW(e.ex)+'</span><span style="text-align:center">'+colR(e.ex)+'</span><span></span></div>';
     e.sets.forEach((s,si)=>{const isW=s.t==='W';const idx=isW?-1:k++;const pv=!isW&&last?(last.sets[idx]||last.sets[last.sets.length-1]):null;let ph=isW?null:(sg||(pv?{w:pv.w,r:pv.r}:null));if(!isW&&e.rl&&e.rl[idx])ph={w:ph?ph.w:'',r:e.rl[idx]};
@@ -708,7 +713,7 @@ V.workout=()=>{const w=S.active;if(!w){stack=[];return V.home()}
   h+='<button class="btn block" data-a="wAddEx">Add exercise</button><label>Workout notes<textarea id="wNote" data-i="wNote" placeholder="How it felt, gym, anything to remember">'+esc(w.note||'')+'</textarea></label><div class="grid2"><button class="btn ghost" data-a="liveMus">Muscles so far</button><button class="btn ghost" data-a="plates">Plate calculator</button></div><button class="btn ghost danger block" data-a="discard">'+(w.editing?'Cancel changes':'Discard workout')+'</button>';
   let nxt='';w.exs.some(e=>{let k=0;return e.sets.some(s=>{const lab=s.t==='W'?'warm-up':'set '+(++k);if(s.done)return false;nxt=exBy(e.ex).name+', '+lab;return true})});
   const rl=w.restEnd?(w.restEnd-Date.now())/1000:0;
-  h+='<div id="timer" class="'+(w.restEnd&&w.restEnd>Date.now()?'':'hide')+'"><div class="bar rbar"><i id="restBar" style="width:'+(w.restDur?Math.max(0,Math.min(100,rl/w.restDur*100)):0).toFixed(1)+'%"></i></div><div class="tiny muted" id="restNext">'+(nxt?'Next up: <span style="color:var(--text)">'+esc(nxt)+'</span>':'All sets done. Finish when ready.')+'</div><div class="grow"><div class="tiny muted">Rest</div><div class="num" id="restT" style="font-size:22px;font-weight:600">0:00</div></div><button class="btn sm" data-a="rest" data-d="-15">−15s</button><button class="btn sm" data-a="rest" data-d="15">+15s</button><button class="btn sm primary" data-a="rest" data-d="0">Skip</button></div>';
+  h+='<div id="timer" class="'+(w.restEnd&&w.restEnd>Date.now()?'':'hide')+'"><div class="grow" style="min-width:0"><div class="tiny muted" id="restNext">'+(nxt?'Rest · next: <span style="color:var(--text)">'+esc(nxt)+'</span>':'Rest · all sets done')+'</div><div class="num" id="restT">0:00</div></div><button class="btn sm" data-a="rest" data-d="-15" aria-label="15 seconds less">−15</button><button class="btn sm" data-a="rest" data-d="15" aria-label="15 seconds more">+15</button><button class="btn sm primary" data-a="rest" data-d="0">Skip</button><div class="bar rbar"><i id="restBar" style="width:'+(w.restDur?Math.max(0,Math.min(100,rl/w.restDur*100)):0).toFixed(1)+'%"></i></div></div>';
   return h;
 };
 V.workoutDetail=v=>{const w=S.workouts[v.id];if(!w){return '<div class="top">'+backBtn+'<h1>Workout removed</h1></div>'}
@@ -1062,6 +1067,8 @@ function renderSheet(){const w=$('#sheetwrap'),el=$('#sheet');if(!sheet){w.class
 }
 function confirmSheet(title,body,yes,fn,danger){sheet={t:'confirm',title,body,yes,fn,danger};renderSheet()}
 /* ---------- render ---------- */
+/* After a set is ticked, scroll so the next open set sits clear of the rest timer. */
+function nextInView(){requestAnimationFrame(()=>{const r=$('#app .setrow:not(.done)'),t=$('#timer');if(!r)return;const rb=r.getBoundingClientRect(),lim=t&&!t.classList.contains('hide')?t.getBoundingClientRect().top-12:innerHeight-12;if(rb.bottom>lim||rb.top<64)$('#app').scrollBy({top:rb.top-Math.max(96,(lim-rb.height)/2),behavior:'smooth'})})}
 function render(resetScroll){KC=null;
   const app=$('#app'),t=cur(),key=t?t.v+(t.id||''):tab;const keep=key===lastKey&&!resetScroll?app.scrollTop:0;lastKey=key;
   app.innerHTML=t?V[t.v](t):V[tab]();app.scrollTop=keep;app.classList.remove('enter');if(resetScroll){void app.offsetWidth;app.classList.add('enter')}
@@ -1160,7 +1167,7 @@ const A={
       s.done=true;prFlag(e,s);
       S.active.restDur=e.rest||S.settings.rest;S.active.restEnd=(S.active.editing||(e.ss&&S.active.exs[+d.e+1]))?0:Date.now()+S.active.restDur*1000;
     }else{s.done=false;s.pr=false}
-    saveActive();render()},
+    saveActive();render();if(s.done)nextInView()},
   setMenu(d){sheet={t:'setMenu',e:+d.e,s:+d.s};renderSheet()},
   setType(d){const e=S.active.exs[sheet.e],x=e.sets[sheet.s];x.t=d.id;if(x.done)prFlag(e,x);saveActive();render()},
   setRpe(d){S.active.exs[sheet.e].sets[sheet.s].rpe=d.id===''?'':+d.id;saveActive();render()},
