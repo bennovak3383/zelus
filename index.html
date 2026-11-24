@@ -1066,12 +1066,15 @@ function render(resetScroll){KC=null;
 let WL=null;function wake(){const want=S.active&&!S.active.editing&&S.settings.awake!==0&&!document.hidden;if(want&&!WL&&navigator.wakeLock){navigator.wakeLock.request('screen').then(l=>{WL=l;l.addEventListener('release',()=>{WL=null})}).catch(()=>{})}else if(!want&&WL){WL.release().catch(()=>{});WL=null}}
 document.addEventListener('visibilitychange',()=>setTimeout(wake,300));
 function tick(){wake();const w=S.active;if(!w)return;const e=$('#elapsed');if(e)e.textContent=clock((Date.now()-w.start)/1000);const r=$('#resumeT');if(r)r.textContent=resumeTxt();const sw=$('#swT');if(sw&&w.sw)sw.textContent=clock((Date.now()-w.sw.start)/1000);
-  const tm=$('#timer');if(tm){const left=w.restEnd?(w.restEnd-Date.now())/1000:0;if(left>0){tm.classList.remove('hide');$('#restT').textContent=clock(left)}else{if(w.restEnd){w.restEnd=0;beep()}tm.classList.add('hide')}}}
+  /* rest end is checked on every screen, so the alert still fires while the workout is minimised */
+  const left=w.restEnd?(w.restEnd-Date.now())/1000:0;if(!(left>0)&&w.restEnd){w.restEnd=0;saveActive();beep()}
+  const tm=$('#timer');if(tm){if(left>0){tm.classList.remove('hide');$('#restT').textContent=clock(left);const rb=$('#restBar');if(rb&&w.restDur)rb.style.width=Math.max(0,Math.min(100,left/w.restDur*100)).toFixed(1)+'%'}else tm.classList.add('hide')}}
 setInterval(tick,500);
 function beep(){try{if(navigator.vibrate)navigator.vibrate([200,100,200]);if(S.settings.sound===0)return;const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const a=new C(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=0.08;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.25)}catch(e){}}
 /* ---------- workout actions ---------- */
 function newWorkout(name,exs,routineId){sheet=null;S.active={id:nid(),name,routineId:routineId||null,start:Date.now(),restEnd:0,exs};saveActive(true);stack=[{v:'workout'}];render(true)}
 function swBtn(ei,si,s){const sw=S.active&&S.active.sw,on=sw&&sw.e===ei&&sw.s===si;return '<button class="btn sm'+(on?' primary':'')+'" style="min-height:44px;padding:0 6px" data-a="swatch" data-e="'+ei+'" data-s="'+si+'"'+(s.done?' disabled':'')+' aria-label="'+(on?'Stop the timer':'Start a timer for this set')+'">'+(on?'<span id="swT" class="num">'+clock((Date.now()-sw.start)/1000)+'</span>':'Start')+'</button>'}
+function prFlag(e,s){if(s.t==='W'||isC(e.ex)){s.pr=false;return}const b=bests(e.ex,S.active.start),k=kind(e.ex);s.pr=k==='wr'?(b.rm>0&&e1rm(s.w||0,s.r)>b.rm+0.01):(b.reps>0&&s.r>b.reps)}
 const blankSets=n=>Array.from({length:n},()=>({t:'N',w:'',r:'',done:false}));
 function begin(fn){if(S.active){confirmSheet('A workout is already running','Finish or discard "'+S.active.name+'" before starting another.','Resume it',()=>{stack=[{v:'workout'}]});return}fn()}
 function finishWorkout(){const w=S.active;const exs=w.exs.map(e=>({ex:e.ex,note:e.note||'',sets:e.sets.filter(s=>s.done&&s.r>0).map(s=>({t:s.t,w:s.w||0,r:s.r,rpe:s.rpe||undefined,pr:s.pr||undefined}))})).filter(e=>e.sets.length);
@@ -1148,12 +1151,12 @@ const A={
   toggleSet(d){const e=S.active.exs[+d.e],s=e.sets[+d.s];
     if(!s.done){const wi=$('#w'+d.e+'_'+d.s),ri=$('#r'+d.e+'_'+d.s);if(S.active.sw&&S.active.sw.e===+d.e&&S.active.sw.s===+d.s){s.r=Math.max(1,Math.round((Date.now()-S.active.sw.start)/1000));S.active.sw=null}if(s.w===''&&wi&&wi.placeholder)s.w=isC(e.ex)?parseFloat(wi.placeholder):toLb(parseFloat(wi.placeholder));if(!s.r&&ri&&ri.placeholder)s.r=parseInt(ri.placeholder,10);if(s.w!==''&&isNaN(s.w))s.w='';if(s.w==='')s.w=0;
       if(!(s.r>0)){toast(kind(e.ex)==='dur'?'Time the set or type the seconds first':'Enter the reps you did first');return}
-      s.done=true;if(s.t!=='W'&&!isC(e.ex)){const b=bests(e.ex,S.active.start),k=kind(e.ex);s.pr=k==='wr'?(b.rm>0&&e1rm(s.w,s.r)>b.rm+0.01):(b.reps>0&&s.r>b.reps)}
-      S.active.restEnd=(S.active.editing||(e.ss&&S.active.exs[+d.e+1]))?0:Date.now()+(e.rest||S.settings.rest)*1000;
+      s.done=true;prFlag(e,s);
+      S.active.restDur=e.rest||S.settings.rest;S.active.restEnd=(S.active.editing||(e.ss&&S.active.exs[+d.e+1]))?0:Date.now()+S.active.restDur*1000;
     }else{s.done=false;s.pr=false}
     saveActive();render()},
   setMenu(d){sheet={t:'setMenu',e:+d.e,s:+d.s};renderSheet()},
-  setType(d){S.active.exs[sheet.e].sets[sheet.s].t=d.id;saveActive();render()},
+  setType(d){const e=S.active.exs[sheet.e],x=e.sets[sheet.s];x.t=d.id;if(x.done)prFlag(e,x);saveActive();render()},
   setRpe(d){S.active.exs[sheet.e].sets[sheet.s].rpe=d.id===''?'':+d.id;saveActive();render()},
   delSet(){S.active.exs[sheet.e].sets.splice(sheet.s,1);sheet=null;saveActive();render()},
   exMenu(d){sheet={t:'exMenu',e:+d.e};renderSheet()},
@@ -1163,7 +1166,7 @@ const A={
   warmups(){const e=S.active.exs[sheet.e];const sg=suggest(e.ex,e.lo,e.hi);const first=e.sets.find(s=>s.t!=='W');const target=(first&&first.w)||(sg&&sg.w)||0;if(!target){toast('Enter your first working weight, then add warm-ups');return}
     const bar=toLb(barW());const ws=[[0.4,8],[0.6,5],[0.8,3]].map(x=>({t:'W',w:Math.max(exBy(e.ex).eq==='barbell'?bar:0,roundInc(target*x[0])),r:x[1],done:false}));e.sets=ws.concat(e.sets.filter(s=>s.t!=='W'));sheet=null;saveActive();render()},
   swatch(d){const w=S.active,e=+d.e,si=+d.s,set=w.exs[e].sets[si];if(w.sw&&w.sw.e===e&&w.sw.s===si){set.r=Math.max(1,Math.round((Date.now()-w.sw.start)/1000));w.sw=null}else{w.sw={e,s:si,start:Date.now()}}saveActive();render()},
-  rest(d){const w=S.active;if(+d.d===0)w.restEnd=0;else w.restEnd=Math.max(Date.now(),w.restEnd+(+d.d)*1000);tick();if(!w.restEnd)$('#timer').classList.add('hide')},
+  rest(d){const w=S.active;if(+d.d===0)w.restEnd=0;else{w.restEnd=Math.max(Date.now(),w.restEnd+(+d.d)*1000);w.restDur=Math.max(w.restDur||0,(w.restEnd-Date.now())/1000)}tick();if(!w.restEnd)$('#timer').classList.add('hide')},
   plates(){sheet={t:'plates',w:''};renderSheet()}, liveMus(){sheet={t:'liveMus'};renderSheet()},
   finish(){finishWorkout()},
   discard(){confirmSheet('Discard this workout?','Nothing from this session will be saved.','Discard',()=>{S.active=null;saveActive(true);LS.del('draft');stack=[]},true)},
@@ -1250,7 +1253,7 @@ const I={
   rField(el){const e=cur().d.exs[+el.dataset.i2];const v=parseInt(el.value,10);if(v>0)e[el.dataset.f]=el.dataset.f==='sets'?Math.min(12,v):v},
   wName(el){S.active.name=el.value;saveActive()}, wNote(el){S.active.note=el.value;saveActive()},
   wWhen(el){const w=S.active,len=w.end0-w.start,f=el.dataset.f;if(f==='m'){const m=parseInt(el.value,10);if(m>0)w.end0=w.start+m*60000}else{const d=$('#wDate').value,t=$('#wTime').value||'12:00';const ts=new Date(d+'T'+t).getTime();if(ts>0&&ts<=Date.now()){w.start=ts;w.end0=ts+len}}saveActive()},
-  set(el){const s=S.active.exs[+el.dataset.e].sets[+el.dataset.s];const v=parseFloat(el.value.replace(',','.'));if(el.dataset.f==='w')s.w=isNaN(v)?'':(isC(S.active.exs[+el.dataset.e].ex)?v:toLb(v));else s.r=isNaN(v)?'':Math.round(v);saveActive();if(s.done){$('#liveVol').textContent=big(wVolume(S.active))}},
+  set(el){const s=S.active.exs[+el.dataset.e].sets[+el.dataset.s];const v=parseFloat(el.value.replace(',','.'));if(el.dataset.f==='w')s.w=isNaN(v)?'':(isC(S.active.exs[+el.dataset.e].ex)?v:toLb(v));else s.r=isNaN(v)?'':Math.round(v);if(s.done)prFlag(S.active.exs[+el.dataset.e],s);saveActive();if(s.done){$('#liveVol').textContent=big(wVolume(S.active))}},
   exNote(el){S.active.exs[sheet.e].note=el.value;saveActive()}, exRest(el){S.active.exs[sheet.e].rest=+el.value;saveActive()},
   plateW(el){sheet.w=parseFloat(el.value)||'';const pos=el.selectionStart;renderSheet();const n=$('#plateW');n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}},
   bw(el){sheet.v=el.value}, fName(el){sheet.v=el.value},
