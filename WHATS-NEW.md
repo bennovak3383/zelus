@@ -1,3 +1,11 @@
+# Zelus update: faster to use (Nov 24, 2026)
+
+- Home: "Up next" with the Start button is now the first card, so starting your next routine is one tap from opening the app. It hides while a workout is running (the Resume bar covers that).
+- Rest timer: a slim one-row bar instead of a tall panel, so it no longer covers the sets you log next. After you tick a set, the screen scrolls so the next open set sits just above the timer.
+- Set rows: "Last time" is plain text (still tap it to copy those numbers), the target is one short line ("225 × 6 lb · +1 rep on your lowest set"), and Options is a ⋯ icon so the exercise name has room.
+
+Saved data is untouched. Installed copies update on next open (offline cache zelus-v5).
+
 # Zelus update: new look and a smoother workout screen (Nov 25, 2026)
 
 ## New look
